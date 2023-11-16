@@ -6,3 +6,6 @@
 - Has packer code for building custom ami
 - Have systemd for automation
 - Have pulumi code seperately for launching in AWS. Can sheck the repository for it
+
+
+Pulumi code can be found in the repository page aws-pulumi or use the given url:https://github.com/VNHarishKumar/aws-pulumi
