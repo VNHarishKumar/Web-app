@@ -1,0 +1,23 @@
+[Unit]
+Description = My CSYE 6225 Web-app
+ConditionPathExists = /opt/web-app
+After = network.target cloud-init.service
+
+[Service]
+Environment=NODE_PORT=9000
+Type=simple
+User=csye6225
+Group=csye6225
+WorkingDirectory = /opt/web-app
+ExecStart= /usr/bin/node /opt/web-app/server.js 
+Restart=always
+RestartSec=3
+StandardOutput=syslong
+StandardError=syslong
+Syslogdentifier=csye6225
+
+[Install]
+WantedBy=multi-user.target
+
+
+
