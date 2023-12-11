@@ -1,0 +1,98 @@
+name: web_app
+
+on:
+  pull_request:
+    branches:
+      - main # Change this to your main branch name if it's different
+
+jobs:
+  build:
+    name: Web_App_CI 
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE:  ${{ secrets.MYSQL_DATABAS }}
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    
+     
+    env:
+      MYSQL_HOST:  ${{ secrets.MYSQL_HOST }}
+      MYSQL_USER:  ${{ secrets.MYSQL_ROOT }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      MYSQL_DATABASE:  ${{ secrets.MYSQL_DATABAS }}
+      MYSQL_DIALECT: mysql
+
+    steps:
+      
+      - name: Checkout Code
+        uses: actions/checkout@v3 
+
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: v16.x 
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: install nodemon 
+        run: npm install nodemon
+        
+      - name: Run Integration Tests
+        run: npm test  
+
+      - name: create Artifact
+        run: zip -r webapp-artifact.zip . -x ".git"
+
+      - name: Create .env file
+        run: |
+          echo MYSQL_HOST="127.0.0.1" >> .env
+          echo MYSQL_USER=${{ secrets.MYSQL_ROOT }} >> .env
+          echo MY_SQL_DATABASE=${{ secrets.MYSQL_DATABAS }} >> .env
+          echo MYSQL_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} >> .env
+          echo DB_PORT= 3306 >> .env
+          echo "ls -al"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: webapp-artifact
+          #  name: my-artifac
+          # path: my-artifact.zip
+          path: webapp-artifact.zip 
+          # /home/runner/work/webapp/webapp 
+      
+      - name: Packer Install
+        run: |
+          cd packer
+          packer init .
+
+      - name: packer fmt check
+        run: packer fmt -check packer/ami.us-east-1.ami.pkr.hcl
+      # - name: Packer fmt check
+      #   run: |
+      #     cd packer
+      #     packer fmt -check ami.us-east-1.ami.pkr.hcl
+         
+
+      # - name: packer fmt
+      #   run: packer fmt .
+
+      - name: packer validate 
+        run: packer validate packer/ami.us-east-1.ami.pkr.hcl
+      
+      - name: Print current directory
+        run: pwd 
+
+
+
+      
