@@ -1,0 +1,175 @@
+name: packer_app
+
+on:
+  push:
+    branches:
+      - main # Change this to your main branch name if it's different
+
+jobs:
+  build:
+    name: Packer_Web_App_CI 
+    runs-on: ubuntu-latest
+
+
+    services:
+      mysql:
+        image: mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE:  ${{ secrets.MYSQL_DATABAS }}
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3    
+     
+    env:
+      MYSQL_HOST:  ${{ secrets.MYSQL_HOST }}
+      MYSQL_USER:  ${{ secrets.MYSQL_ROOT }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      MYSQL_DATABASE:  ${{ secrets.MYSQL_DATABAS }}
+      MYSQL_DIALECT: mysql
+    
+    steps:
+      
+      - name: Checkout Code
+        uses: actions/checkout@v3 
+
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: v16.x 
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: install nodemon 
+        run: npm install nodemon
+        
+      - name: Run Integration Tests
+        run: npm test  
+
+  scp:
+
+    name: Packer_Web_App_SCP 
+    runs-on: ubuntu-latest 
+    needs: build
+
+    env:
+      MYSQL_HOST:  ${{ secrets.MYSQL_HOST }}
+      MYSQL_USER:  ${{ secrets.MYSQL_ROOT }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      MYSQL_DATABASE:  ${{ secrets.MYSQL_DATABAS }}
+      MYSQL_DIALECT: mysql
+
+    steps:
+      
+      - name: Checkout Code
+        uses: actions/checkout@v3 
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.EC2_IAM_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.EC2_IAM_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: v16.x 
+          cache: npm
+              
+      #  zip web app 
+      - name: create Artifact
+        run: zip -r webapp-artifact.zip . -x ".git"
+
+      - name: Create .env file
+        run: |
+          echo "MYSQL_HOST=127.0.0.1" >> .env
+          echo "MYSQL_USER='${{ secrets.MYSQL_ROOT }}'" >> .env
+          echo "MYSQL_DATABASE='${{ secrets.MYSQL_DATABAS }}'" >> .env
+          echo "MYSQL_PASSWORD='${{ secrets.MYSQL_ROOT_PASSWORD }}'" >> .env
+          echo "MYSQL_DIALECT='mysql'" >> .env
+          ls -al
+
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: webapp-artifact
+          path: webapp-artifact.zip 
+
+      - name: Find Artifact Path
+        run: echo "The path to the artifact is $GITHUB_WORKSPACE/my-artifact"
+      
+      - name: List contents of a directory
+        run: |
+          ls /home/runner/work/webapp/webapp/
+        
+
+        
+
+      - name: Packer Install
+        run: |
+          cd packer
+          packer init .
+
+    
+      - name: Build Application
+        id: Build_Application
+        run: |
+          AMI_ID=$(packer build -machine-readable --var-file=packer/webapp.pkrvars.hcl packer/ami.us-east-1.ami.pkr.hcl | tee /dev/stderr | awk -F, '$0 ~/artifact,0,id/ {print $6}')
+          echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
+
+
+
+      - name: Created AMI
+        run: |
+          full_ami_id="${{ env.AMI_ID }}"
+          region=$(echo $full_ami_id | cut -d':' -f1)
+          ami_id=$(echo $full_ami_id | cut -d':' -f2)
+          echo "Created AMI in region $region with AMI ID $ami_id"
+          echo "AMI_REGION=$region" >> $GITHUB_ENV
+          echo "AMI_ID=$ami_id" >> $GITHUB_ENV
+
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.DEMO_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.DEMO_SECRET_ACCESS_KEY  }}
+          aws-region: ${{ env.AMI_REGION }}
+
+      
+
+      - name: Update Launch Template
+        run: |
+          aws ec2 create-launch-template-version \
+            --launch-template-id $(aws ec2 describe-launch-templates --query 'LaunchTemplates | sort_by(@, &CreateTime) | [-1].LaunchTemplateId' --output text) \
+            --version-description WebVersion2 \
+            --source-version 1 \
+            --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
+          echo "Latest Launch Template Version: $latest_version"
+          echo "LATEST_LAUNCH_TEMPLATE_VERSION=$latest_version" >> $GITHUB_ENV
+
+
+      - name: Update Auto scalling
+        run: |
+          latest_version=$(aws ec2 describe-launch-templates --launch-template-ids $launch_template_id --query 'LaunchTemplates[0].LatestVersionNumber' --output text) 
+          LT_NAME=$(aws ec2 describe-launch-templates --query 'LaunchTemplates | sort_by(@, &CreateTime) | [-1].LaunchTemplateId' --output text) 
+          autoscaling_group=$(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?contains(LaunchTemplate.LaunchTemplateName, '${launch_template_id}')].AutoScalingGroupName" --output text)
+          echo "Launch Template Version: $latest_version"
+          echo "Autoscale version: $autoscaling_group"
+          aws autoscaling update-auto-scaling-group \
+              --auto-scaling-group-name $autoscaling_group \
+              --launch-template LaunchTemplateId=$(aws ec2 describe-launch-templates --query 'LaunchTemplates | sort_by(@, &CreateTime) | [-1].LaunchTemplateId' --output text),Version=$latest_version
+
+      - name: Instant Refresh
+        run: |
+          LT_NAME=$(aws ec2 describe-launch-templates --query 'LaunchTemplates | sort_by(@, &CreateTime) | [-1].LaunchTemplateId' --output text) 
+          autoscaling_group=$(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?contains(LaunchTemplate.LaunchTemplateName, '${launch_template_id}')].AutoScalingGroupName" --output text)
+          echo "Autoscale version: $autoscaling_group"
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name $autoscaling_group \
+        
