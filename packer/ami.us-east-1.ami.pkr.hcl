@@ -8,7 +8,7 @@ packer {
 }
 variable "ami_username" {
   type    = string
-  default = "924858102654"
+  default = "account-id"
 }
 
 variable "profile" {
