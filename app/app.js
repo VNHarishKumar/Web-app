@@ -17,28 +17,6 @@ app.use(express.json());
 app.use(bodyParser.text());
 app.use(express.urlencoded());
 
-
-// const users = {};
-
-//   fs.createReadStream('./opt/user.csv')
-//   .pipe(csv())
-//   .on('data', (data) => {
-//     users[data.email] = data.password;
-//   })
-//   .on('end', () => {
-//     // Authentication middleware
-//     const authMiddleware = basicAuth({
-//       users: users,
-//       challenge: true, // Display a browser authentication dialog
-//       unauthorizedResponse: 'Unauthorized',
-//     });
-
-// app.use('/v1/assignments', authMiddleware); 
-
-
-
-
-
 route(app);
-  // });
+
 export default app;
