@@ -69,15 +69,10 @@ export const post = async (req,res) =>{
                   const rec =   await assignments.create(newrecord)
 
   .then(newassignment => {
-    // console.log('New assignment created:', newassignment);
-    // console.log('Try in save worked');
-    // setSuccessfulResponse(newassignment,res);
     logger.log('info', `Post method: successful New assignment created. details: ${JSON.stringify(newassignment)}`);
     setSuccessfulPostResponse(newassignment,res); 
   })
   .catch(error => {
-    // console.error('Error creating assignment:', error);
-    // console.log('Error in catch');
     logger.log('error', `New assignment not created check points or atempts field. Points in range between 0 to 10 and attempts between 1 to 3`);
     setErrorPostResponse({msg:'Points in range between 0 to 10 and attempts between 1 to 3'},res);
   });
