@@ -40,16 +40,7 @@ dotenv.config();
   }
   );
 
-// -------------------- Synchronize the model with the database. It check the schema if table or schema change it updates-------------------------
-// sequelize.sync({ force: false,alter:true })
-//       .then(() => {
-//         console.log('Table created (if not exists) successfully.');
 
-        
-//       })
-//       .catch((err) => {
-//         console.error('Check database Connection');
-//       });
   
 export default assignments;
 
