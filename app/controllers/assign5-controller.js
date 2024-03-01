@@ -47,9 +47,7 @@ export const sub_post = async (req,res) =>{
         {
                // To get the count of record
                const getIdVal = await databaseService.countId(id);
-            //    console.log(getIdVal);
-               // console.log("Num_of_attempts:",getIdVal.num_of_attempts);
-               // console.log("Deadline",getIdVal.deadline);
+           
    
                // To get the count of Id for checking num_of_attempts
                console.log("Username :",usernameid);
@@ -83,8 +81,7 @@ export const sub_post = async (req,res) =>{
                     
             const currentTimestamp = new Date().getTime(); // Get the current timestamp in milliseconds
             const deadlineTimestamp = new Date(getIdVal.deadline).getTime();    
-            // console.log("currentTimestamp:",currentTimestamp);     
-            // console.log("deadlineTimestamp:",deadlineTimestamp);
+           
             if (currentTimestamp < deadlineTimestamp) 
             {
                 logger.log('info','The current time is before the deadline.');
@@ -99,12 +96,11 @@ export const sub_post = async (req,res) =>{
                     var entries;
                     // To send sns
                     var topicArn=`${process.env.TOPIC_ARN}`;
-                    // var message=`${process.env.MSG}`;
+                    
                     var message;
-                    // topicArn = 'arn:aws:sns:us-east-1:924858102654:Submission';
+                    
                     var url = newrecord.submission_url;
-                    // message = 'Assignment Submitted Successfully';
-                    // message=`${usernameid},${url}`;
+                   
                     if(Idcount === 'Not allowed')
                     {
                         entries = 1;
@@ -127,25 +123,12 @@ export const sub_post = async (req,res) =>{
 
 
                 
-                    // setSuccessfulPostResponse(rec,res);
+                   
                 }
                 else
                 {
 
-                    // var topicArn;
-                    // var message;
-                    // topicArn = 'arn:aws:sns:us-east-1:924858102654:Submission';
-                    // message = 'Assignment Attempt Limit Exceded';
-                    // publishToSNS(topicArn, message, (err, data) => {
-                    //     if (err) {
-                    //       // Handle error
-                    //       res.status(500).json({ error: 'Failed to send notification' });
-                    //     } else {
-                    //     setAttemptExcedded(res);
-                    //     }
-                    //   });
-
-                    // console.log("Attempt excedded");
+                   
                     setAttemptExcedded(res);
                 }
     
@@ -154,22 +137,7 @@ export const sub_post = async (req,res) =>{
             else 
             {
 
-                // var topicArn;
-                // var message;
-                // topicArn = 'arn:aws:sns:us-east-1:924858102654:Submission';
-                // message = 'Assignment Deadline over';
-                // publishToSNS(topicArn, message, (err, data) => {
-                //     if (err) {
-                //       // Handle error
-                //       res.status(500).json({ error: 'Failed to send notification' });
-                //     } else {
-                //       // Handle success
-                //     //   res.status(200).json({ message: 'Notification sent successfully', data });
-                //     setTimeExcedded(res);
-                //     }
-                //   });
-
-
+              
                 setTimeExcedded(res);
                 logger.log('error','The current time is on or after the deadline.');
                 console.log('The current time is on or after the deadline.');
@@ -181,20 +149,7 @@ export const sub_post = async (req,res) =>{
     }catch(err)
     {
 
-        // var topicArn;
-        // var message;
-        // topicArn = 'arn:aws:sns:us-east-1:924858102654:Submission';
-        // message = 'Assignment Not submmited error occured';
-        // publishToSNS(topicArn, message, (err, data) => {
-        //     if (err) {
-        //       // Handle error
-        //       res.status(500).json({ error: 'Failed to send notification' });
-        //     } else {
-        //       // Handle success
-        //     //   res.status(200).json({ message: 'Notification sent successfully', data });
-        //     setErrorPostResponse(err,res);
-        //     }
-        //   });
+        
 
         console.log("Updated*********************");
         console.log(err);
